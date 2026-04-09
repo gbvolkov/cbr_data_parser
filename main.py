@@ -2,79 +2,279 @@ from pathlib import Path
 import sys
 
 from cbr_data_parser import (
+    convert_insurer_active_contract_amount_sheet_to_csv_and_json,
     convert_insurer_active_contract_count_sheet_to_csv_and_json,
     convert_insurer_contract_amount_sheet_to_csv_and_json,
     convert_insurer_contract_count_sheet_to_csv_and_json,
+    convert_insurer_intermediary_electronic_premiums_sheet_to_csv_and_json,
+    convert_insurer_intermediary_electronic_reward_sheet_to_csv_and_json,
+    convert_insurer_intermediary_premiums_sheet_to_csv_and_json,
+    convert_insurer_intermediary_reward_sheet_to_csv_and_json,
+    convert_insurer_oms_sheet_to_csv_and_json,
+    convert_insurer_osago_direct_reimbursement_sheet_to_csv_and_json,
+    convert_insurer_osago_sheet_to_csv_and_json,
+    convert_insurer_payouts_sheet_to_csv_and_json,
     convert_insurer_premiums_sheet_to_csv_and_json,
+    convert_insurer_reported_claim_count_sheet_to_csv_and_json,
+    convert_insurer_settled_claim_count_sheet_to_csv_and_json,
     convert_key_insurance_sheet_to_csv_and_json,
     convert_main_activity_sheet_to_csv_and_json,
+    convert_ovs_members_sheet_to_csv_and_json,
+    convert_regional_contract_amount_sheet_to_csv_and_json,
+    convert_regional_contract_count_sheet_to_csv_and_json,
+    convert_regional_payments_sheet_to_csv_and_json,
+    convert_regional_premiums_sheet_to_csv_and_json,
+    convert_regional_settled_claims_sheet_to_csv_and_json,
+    convert_reinsurance_incoming_payments_sheet_to_csv_and_json,
+    convert_reinsurance_incoming_premiums_sheet_to_csv_and_json,
+    convert_reinsurance_outgoing_payments_sheet_to_csv_and_json,
+    convert_reinsurance_outgoing_premiums_sheet_to_csv_and_json,
 )
+
+
+CONVERSIONS = [
+    {
+        "prefix": 1,
+        "converter": convert_key_insurance_sheet_to_csv_and_json,
+        "primary_label": "Показатели",
+        "primary_key": "metric_rows",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 2,
+        "converter": convert_main_activity_sheet_to_csv_and_json,
+        "primary_label": "Показатели",
+        "primary_key": "metric_rows",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 3,
+        "converter": convert_insurer_premiums_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 4,
+        "converter": convert_insurer_contract_count_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 5,
+        "converter": convert_insurer_contract_amount_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 6,
+        "converter": convert_insurer_active_contract_count_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 7,
+        "converter": convert_insurer_active_contract_amount_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 8,
+        "converter": convert_insurer_reported_claim_count_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 9,
+        "converter": convert_insurer_settled_claim_count_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 10,
+        "converter": convert_insurer_payouts_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 11,
+        "converter": convert_regional_premiums_sheet_to_csv_and_json,
+        "primary_label": "Регионы",
+        "primary_key": "region_row_count",
+        "secondary_label": "Показатели",
+        "secondary_key": "metric_columns",
+    },
+    {
+        "prefix": 13,
+        "converter": convert_regional_contract_count_sheet_to_csv_and_json,
+        "primary_label": "Регионы",
+        "primary_key": "region_row_count",
+        "secondary_label": "Показатели",
+        "secondary_key": "metric_columns",
+    },
+    {
+        "prefix": 15,
+        "converter": convert_regional_contract_amount_sheet_to_csv_and_json,
+        "primary_label": "Регионы",
+        "primary_key": "region_row_count",
+        "secondary_label": "Показатели",
+        "secondary_key": "metric_columns",
+    },
+    {
+        "prefix": 16,
+        "converter": convert_regional_payments_sheet_to_csv_and_json,
+        "primary_label": "Регионы",
+        "primary_key": "region_row_count",
+        "secondary_label": "Показатели",
+        "secondary_key": "metric_columns",
+    },
+    {
+        "prefix": 18,
+        "converter": convert_regional_settled_claims_sheet_to_csv_and_json,
+        "primary_label": "Регионы",
+        "primary_key": "region_row_count",
+        "secondary_label": "Показатели",
+        "secondary_key": "metric_columns",
+    },
+    {
+        "prefix": 19,
+        "converter": convert_reinsurance_incoming_premiums_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 20,
+        "converter": convert_reinsurance_incoming_payments_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 21,
+        "converter": convert_reinsurance_outgoing_premiums_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 22,
+        "converter": convert_reinsurance_outgoing_payments_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 23,
+        "converter": convert_insurer_osago_sheet_to_csv_and_json,
+        "primary_label": "Записи",
+        "primary_key": "record_row_count",
+        "secondary_label": "Показатели",
+        "secondary_key": "metric_columns",
+    },
+    {
+        "prefix": 24,
+        "converter": convert_insurer_osago_direct_reimbursement_sheet_to_csv_and_json,
+        "primary_label": "Записи",
+        "primary_key": "record_row_count",
+        "secondary_label": "Показатели",
+        "secondary_key": "metric_columns",
+    },
+    {
+        "prefix": 25,
+        "converter": convert_insurer_oms_sheet_to_csv_and_json,
+        "primary_label": "Записи",
+        "primary_key": "record_row_count",
+        "secondary_label": "Показатели",
+        "secondary_key": "metric_columns",
+    },
+    {
+        "prefix": 26,
+        "converter": convert_insurer_intermediary_premiums_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 27,
+        "converter": convert_insurer_intermediary_reward_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 28,
+        "converter": convert_insurer_intermediary_electronic_premiums_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 29,
+        "converter": convert_insurer_intermediary_electronic_reward_sheet_to_csv_and_json,
+        "primary_label": "Страховщики",
+        "primary_key": "insurer_row_count",
+        "secondary_label": "Виды страхования",
+        "secondary_key": "insurance_columns",
+    },
+    {
+        "prefix": 30,
+        "converter": convert_ovs_members_sheet_to_csv_and_json,
+        "primary_label": "Записи",
+        "primary_key": "record_row_count",
+        "secondary_label": "Показатели",
+        "secondary_key": "metric_columns",
+    },
+]
 
 
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
 
-    source_path = Path("./data/01.Основные показатели деятельности (по ключевым видам страхования).xlsx")
-    csv_path = Path("./output/01.Основные показатели деятельности (по ключевым видам страхования).csv")
-    json_path = Path("./output/01.Основные показатели деятельности (по ключевым видам страхования).json")
+    data_directory = Path("./data")
+    output_directory = Path("./output")
 
-    metadata = convert_key_insurance_sheet_to_csv_and_json(source_path, csv_path, json_path)
-    print(f"CSV: {csv_path}")
-    print(f"JSON: {json_path}")
-    print(f"Показатели: {len(metadata['metric_rows'])}")
-    print(f"Виды страхования: {len(metadata['insurance_columns'])}")
+    for conversion in CONVERSIONS:
+        source_path = next(data_directory.glob(f"{conversion['prefix']:02d}.*.xlsx"))
+        csv_path = output_directory / f"{source_path.stem}.csv"
+        json_path = output_directory / f"{source_path.stem}.json"
 
-    source_path = Path("./data/02.Основные показатели деятельности.xlsx")
-    csv_path = Path("./output/02.Основные показатели деятельности.csv")
-    json_path = Path("./output/02.Основные показатели деятельности.json")
+        metadata = conversion["converter"](source_path, csv_path, json_path)
 
-    metadata = convert_main_activity_sheet_to_csv_and_json(source_path, csv_path, json_path)
-    print(f"CSV: {csv_path}")
-    print(f"JSON: {json_path}")
-    print(f"Показатели: {len(metadata['metric_rows'])}")
-    print(f"Виды страхования: {len(metadata['insurance_columns'])}")
+        print(f"CSV: {csv_path}")
+        print(f"JSON: {json_path}")
+        print(f"{conversion['primary_label']}: {_count_value(metadata[conversion['primary_key']])}")
+        print(f"{conversion['secondary_label']}: {_count_value(metadata[conversion['secondary_key']])}")
 
-    source_path = Path("./data/03.Страховые премии по договорам страхования (в разрезе страховщиков).xlsx")
-    csv_path = Path("./output/03.Страховые премии по договорам страхования (в разрезе страховщиков).csv")
-    json_path = Path("./output/03.Страховые премии по договорам страхования (в разрезе страховщиков).json")
 
-    metadata = convert_insurer_premiums_sheet_to_csv_and_json(source_path, csv_path, json_path)
-    print(f"CSV: {csv_path}")
-    print(f"JSON: {json_path}")
-    print(f"Страховщики: {metadata['insurer_row_count']}")
-    print(f"Виды страхования: {len(metadata['insurance_columns'])}")
-
-    source_path = Path("./data/04.Количество заключенных договоров (в разрезе страховщиков).xlsx")
-    csv_path = Path("./output/04.Количество заключенных договоров (в разрезе страховщиков).csv")
-    json_path = Path("./output/04.Количество заключенных договоров (в разрезе страховщиков).json")
-
-    metadata = convert_insurer_contract_count_sheet_to_csv_and_json(source_path, csv_path, json_path)
-    print(f"CSV: {csv_path}")
-    print(f"JSON: {json_path}")
-    print(f"Страховщики: {metadata['insurer_row_count']}")
-    print(f"Виды страхования: {len(metadata['insurance_columns'])}")
-
-    source_path = Path("./data/05.Страховые суммы по заключенным договорам (в разрезе страховщиков).xlsx")
-    csv_path = Path("./output/05.Страховые суммы по заключенным договорам (в разрезе страховщиков).csv")
-    json_path = Path("./output/05.Страховые суммы по заключенным договорам (в разрезе страховщиков).json")
-
-    metadata = convert_insurer_contract_amount_sheet_to_csv_and_json(source_path, csv_path, json_path)
-    print(f"CSV: {csv_path}")
-    print(f"JSON: {json_path}")
-    print(f"Страховщики: {metadata['insurer_row_count']}")
-    print(f"Виды страхования: {len(metadata['insurance_columns'])}")
-
-    source_path = Path("./data/06.Количество действовавших договоров (в разрезе страховщиков).xlsx")
-    csv_path = Path("./output/06.Количество действовавших договоров (в разрезе страховщиков).csv")
-    json_path = Path("./output/06.Количество действовавших договоров (в разрезе страховщиков).json")
-
-    metadata = convert_insurer_active_contract_count_sheet_to_csv_and_json(
-        source_path, csv_path, json_path
-    )
-    print(f"CSV: {csv_path}")
-    print(f"JSON: {json_path}")
-    print(f"Страховщики: {metadata['insurer_row_count']}")
-    print(f"Виды страхования: {len(metadata['insurance_columns'])}")
+def _count_value(value) -> int:
+    if isinstance(value, int):
+        return value
+    return len(value)
 
 
 if __name__ == "__main__":

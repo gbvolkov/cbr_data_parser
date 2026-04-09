@@ -1,0 +1,184 @@
+You work with the SQLite database at "C:\Projects\GWP\cbr_data_parser\output\cbr_data.sqlite".
+
+The database uses a long analytical structure. Table descriptions below are based on the workbook metadata and the actual SQLite schemas.
+
+Core SQL rules:
+- Always quote table names and column names with double quotes.
+- All analytical tables are narrow and row-based. The main measure value is in `"Значение"`.
+- The detailed analytical dimension is split across `"Показатель 1"` ... `"Показатель 5"`.
+- Indicator paths can have different depth.
+- Indicator levels are right-aligned: the deepest level is always stored in the last non-empty `"Показатель N"` column, and shorter paths leave the leading level columns empty.
+- Use only the non-empty level columns when matching an indicator path.
+- `"Тип раздела"` stores a normalized business category for `"Раздел"` such as `"страховая премия"`, `"размер выплаты"`, or `"количество договоров"`.
+- `"ед. Измерения"` stores the unit and should be used when mixing or comparing indicators.
+- `"Раздел"` stores the source metric block. In `"сводные_показатели"` it is the original KPI row. In the subject tables it is the source sheet description without the trailing unit suffix.
+- In `"регионы"`, the raw regional label is kept in `"Наименования федеральных округов и субъектов Российской Федерации"`, and the hierarchy is split into `"country"`, `"district"`, and `"region"`.
+- Treat NULL as missing data, not as zero.
+- Prefer filtering on `"Тип раздела"` when you need a broad metric family and on `"Раздел"` when you need the exact source block.
+- Do not aggregate different `"ед. Измерения"` values together.
+- Do not aggregate different `"Тип раздела"`, `"Раздел"`, or indicator level combinations together unless you explicitly intend to roll them up.
+
+Table catalog:
+- "сводные_показатели": This table combines the two summary sheets that do not have a separate subject dimension. It covers the overall activity KPIs and the summary by key insurance lines. Row grain: one summary-section and indicator pair per row. Identifier columns: none. Fields `"Показатель 1"` ... `"Показатель 5"`: contains insurance types, summary KPI rows, and hierarchical insurance categories from the two transposed summary sheets. Actual columns: "Раздел", "Тип раздела", "Показатель 1", "Показатель 2", "Показатель 3", "Показатель 4", "Показатель 5", "Значение", "ед. Измерения".
+- "страховщики": This table combines all insurer-level sheets. It includes core insurance metrics, inward and outward reinsurance, ОСАГО, direct reimbursement, ОМС, and intermediary participation. Row grain: one insurer, section, and indicator pair per row. Identifier columns: "Регистрационный номер записи страховщика в едином государственном реестре субъектов страхового дела", "Полное наименование страховщика". Fields `"Показатель 1"` ... `"Показатель 5"`: contains all insurer-level indicators from the source workbook, including insurance-line hierarchies, reinsurance metrics, ОСАГО and ОМС KPIs, and intermediary-related measures. Actual columns: "Раздел", "Тип раздела", "Регистрационный номер записи страховщика в едином государственном реестре субъектов страхового дела", "Полное наименование страховщика", "Показатель 1", "Показатель 2", "Показатель 3", "Показатель 4", "Показатель 5", "Значение", "ед. Измерения".
+- "регионы": This table combines all regional sheets for federal districts and subjects of the Russian Federation. It includes premiums, contract counts, contract amounts, payouts, and settled claims. Row grain: one region, section, and indicator pair per row. Identifier columns: "Наименования федеральных округов и субъектов Российской Федерации", "country", "district", "region". Fields `"Показатель 1"` ... `"Показатель 5"`: contains regional indicators for insurance lines and comparable regional KPI blocks across all regional sheets. Actual columns: "Раздел", "Тип раздела", "Наименования федеральных округов и субъектов Российской Федерации", "country", "district", "region", "Показатель 1", "Показатель 2", "Показатель 3", "Показатель 4", "Показатель 5", "Значение", "ед. Измерения".
+- "общества_взаимного_страхования": This table contains the OVS subject table. It includes membership counts, entries, exits, closing balances, and related membership indicators. Row grain: one OVS entity, section, and indicator pair per row. Identifier columns: "Регистрационный номер записи общества взаимного страхования в едином государственном реестре субъектов страхового дела", "Полное наименование страховщика". Fields `"Показатель 1"` ... `"Показатель 5"`: contains OVS membership indicators, including opening balance, joins, exits by reason, closing balance, and related counts. Actual columns: "Раздел", "Тип раздела", "Регистрационный номер записи общества взаимного страхования в едином государственном реестре субъектов страхового дела", "Полное наименование страховщика", "Показатель 1", "Показатель 2", "Показатель 3", "Показатель 4", "Показатель 5", "Значение", "ед. Измерения".
+
+Available `"Тип раздела"` values:
+- "страховая премия": Premium-related sections, including direct insurance premiums, reinsurance premiums, and premium income references. Possible indicator levels: 1, 2, 3, 4, 5.
+- "размер выплаты": Payout-related sections, including insurance payouts, court-ordered payouts, and payout expense references. Possible indicator levels: 1, 2, 3, 4, 5.
+- "количество договоров": Sections about the count of insurance contracts, both concluded and active. Possible indicator levels: 1, 2, 3, 4, 5.
+- "страховая сумма": Sections about insured amounts or total sums under insurance contracts. Possible indicator levels: 1, 2, 3, 4, 5.
+- "число застрахованных": Sections about the number of insured persons. Possible indicator levels: 1, 2, 3, 4, 5.
+- "количество страховых случаев": Sections about reported or processed insurance case counts in mixed summary blocks. Possible indicator levels: 1, 2, 3, 4, 5.
+- "количество заявленных страховых случаев": Sections specifically about reported insurance case counts. Possible indicator levels: 1, 2, 3, 4, 5.
+- "количество урегулированных страховых случаев": Sections specifically about settled insurance case counts. Possible indicator levels: 1, 2, 3, 4, 5.
+- "неурегулированный страховой случай": Sections about outstanding unresolved insurance cases and their amounts. Possible indicator levels: 1, 2, 3, 4, 5.
+- "возврат страховой премии": Sections about returned premiums and the related contract counts. Possible indicator levels: 1, 2, 3, 4, 5.
+- "выкупная сумма": Sections about surrender values and related contract counts. Possible indicator levels: 1, 2, 3, 4, 5.
+- "негарантированная выплата": Sections about non-guaranteed payouts and their counts. Possible indicator levels: 1, 2, 3, 4, 5.
+- "дополнительная выплата": Sections about additional payouts and their counts. Possible indicator levels: 1, 2, 3, 4, 5.
+- "возмещение расходов страхователя": Sections about reimbursed policyholder expenses aimed at loss reduction. Possible indicator levels: 1, 2, 3, 4, 5.
+- "неустойка": Sections about penalties for delayed insurance payout processing. Possible indicator levels: 1, 2, 3, 4, 5.
+- "вознаграждение посредникам": Sections about intermediary remuneration and commissions. Possible indicator levels: 1, 2, 3, 4.
+- "ОСАГО": Operational and financial sections from the ОСАГО subject table. Possible indicator levels: 1, 2, 3, 4, 5.
+- "прямое возмещение убытков по ОСАГО": Sections about direct loss compensation flows within ОСАГО. Possible indicator levels: 2, 3.
+- "ОМС": Operational sections from the mandatory medical insurance subject table. Possible indicator levels: 2, 3.
+- "число членов ОВС": Sections about mutual insurance society membership counts and changes. Possible indicator levels: 1, 2, 3.
+
+Query rules:
+- Most comparisons now happen inside one subject table by filtering on `"Раздел"`.
+- Use `"Тип раздела"` for broad groupings such as premiums, payouts, contract counts, or insured-person counts.
+- In `"страховщики"`, identify entities by `"Регистрационный номер записи страховщика в едином государственном реестре субъектов страхового дела"` and keep `"Полное наименование страховщика"` as a label.
+- In `"регионы"`, use `"country"` for the top territorial split, `"district"` for federal districts, and `"region"` for specific subjects; the original row label remains in `"Наименования федеральных округов и субъектов Российской Федерации"`.
+- In `"общества_взаимного_страхования"`, identify rows by `"Регистрационный номер записи общества взаимного страхования в едином государственном реестре субъектов страхового дела"`.
+- When you compare two different metric blocks inside the same table, match on the subject identifier columns and, when needed, on all indicator level columns.
+- When you combine results, also keep `"ед. Измерения"` aligned.
+- Do not compare `"сводные_показатели"` to the subject tables unless you explicitly map the business meaning of both `"Раздел"` and the indicator level path.
+
+Example query patterns:
+
+1. Top insurers for one chosen metric block and indicator:
+```sql
+SELECT
+  "Регистрационный номер записи страховщика в едином государственном реестре субъектов страхового дела" AS insurer_id,
+  "Полное наименование страховщика" AS insurer_name,
+  "Тип раздела",
+  "Раздел",
+  "Показатель 1",
+  "Показатель 2",
+  "Показатель 3",
+  "Показатель 4",
+  "Показатель 5",
+  "Значение",
+  "ед. Измерения"
+FROM "страховщики"
+WHERE "Тип раздела" = 'страховая премия'
+  AND "Раздел" = 'Сведения о страховых премиях (взносах) по договорам страхования, в разрезе страховщиков'
+  AND "Показатель 5" = 'Всего*'
+  AND "Показатель 1" IS NULL
+  AND "Показатель 2" IS NULL
+  AND "Показатель 3" IS NULL
+  AND "Показатель 4" IS NULL
+ORDER BY "Значение" DESC
+LIMIT 20;
+```
+
+2. Compare two insurer metric blocks inside the same table:
+```sql
+SELECT
+  p."Регистрационный номер записи страховщика в едином государственном реестре субъектов страхового дела" AS insurer_id,
+  p."Полное наименование страховщика" AS insurer_name,
+  p."Тип раздела" AS premium_section_type,
+  p."Показатель 1",
+  p."Показатель 2",
+  p."Показатель 3",
+  p."Показатель 4",
+  p."Показатель 5",
+  p."Значение" AS premium_value,
+  q."Значение" AS payout_value,
+  CASE
+    WHEN p."Значение" IS NULL OR p."Значение" = 0 THEN NULL
+    ELSE 1.0 * q."Значение" / p."Значение"
+  END AS payout_ratio
+FROM "страховщики" p
+JOIN "страховщики" q
+  ON p."Регистрационный номер записи страховщика в едином государственном реестре субъектов страхового дела" =
+     q."Регистрационный номер записи страховщика в едином государственном реестре субъектов страхового дела"
+ AND p."Показатель 1" IS q."Показатель 1"
+ AND p."Показатель 2" IS q."Показатель 2"
+ AND p."Показатель 3" IS q."Показатель 3"
+ AND p."Показатель 4" IS q."Показатель 4"
+ AND p."Показатель 5" IS q."Показатель 5"
+WHERE p."Тип раздела" = 'страховая премия'
+  AND q."Тип раздела" = 'размер выплаты'
+  AND p."Раздел" = 'Сведения о страховых премиях (взносах) по договорам страхования, в разрезе страховщиков'
+  AND q."Раздел" = 'Сведения о выплатах в разрезе страховщиков'
+  AND p."Показатель 5" = 'Всего*'
+  AND p."Показатель 1" IS NULL
+  AND p."Показатель 2" IS NULL
+  AND p."Показатель 3" IS NULL
+  AND p."Показатель 4" IS NULL
+  AND p."ед. Измерения" = q."ед. Измерения";
+```
+
+3. Regional comparison for one indicator:
+```sql
+SELECT
+  "country",
+  "district",
+  "region",
+  "Тип раздела",
+  "Раздел",
+  "Показатель 1",
+  "Показатель 2",
+  "Показатель 3",
+  "Показатель 4",
+  "Показатель 5",
+  "Значение",
+  "ед. Измерения"
+FROM "регионы"
+WHERE "Тип раздела" = 'страховая премия'
+  AND "country" = 'На территории Российской Федерации'
+  AND "district" = 'Дальневосточный федеральный округ'
+  AND "Раздел" = 'Сведения о страховых премиях (взносах) по договорам страхования в разрезе федеральных округов и субъектов Российской Федерации'
+  AND "Показатель 5" = 'Всего'
+  AND "Показатель 1" IS NULL
+  AND "Показатель 2" IS NULL
+  AND "Показатель 3" IS NULL
+  AND "Показатель 4" IS NULL
+ORDER BY "Значение" DESC;
+```
+
+4. Summary-table lookup:
+```sql
+SELECT
+  "Тип раздела",
+  "Раздел",
+  "Показатель 1",
+  "Показатель 2",
+  "Показатель 3",
+  "Показатель 4",
+  "Показатель 5",
+  "Значение",
+  "ед. Измерения"
+FROM "сводные_показатели"
+WHERE "Раздел" = 'Страховые премии (взносы) по договорам страхования, тыс. руб.'
+ORDER BY "Значение" DESC;
+```
+
+5. Safe aggregation pattern:
+```sql
+SELECT
+  "Тип раздела",
+  "Раздел",
+  "Показатель 1",
+  "Показатель 2",
+  "Показатель 3",
+  "Показатель 4",
+  "Показатель 5",
+  "ед. Измерения",
+  SUM("Значение") AS total_value
+FROM "<table_name>"
+GROUP BY "Тип раздела", "Раздел", "Показатель 1", "Показатель 2", "Показатель 3", "Показатель 4", "Показатель 5", "ед. Измерения";
+```

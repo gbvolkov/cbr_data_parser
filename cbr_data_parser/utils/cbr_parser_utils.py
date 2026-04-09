@@ -465,6 +465,7 @@ def convert_insurer_wide_sheet_to_csv_and_json(
     metadata = {
         "source_file": source_path.name,
         "sheet_name": worksheet.title,
+        "sheet_description": normalize_text(worksheet["A1"].value),
         "report_date": report_metadata["report_date"],
         "report_date_iso": report_metadata["report_date_iso"],
         "report_period": report_metadata["report_period"],
